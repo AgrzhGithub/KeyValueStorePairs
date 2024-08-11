@@ -1,6 +1,8 @@
 package types
 
-import "sync"
+import (
+	"sync"
+)
 
 var Store = struct {
 	sync.RWMutex

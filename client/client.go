@@ -2,9 +2,12 @@ package client
 
 import (
 	"errors"
+	"fmt"
 	"github.com/gorilla/mux"
 	"io"
 	"net/http"
+	"os"
+	"value/transaction"
 	"value/types"
 )
 
@@ -77,7 +80,7 @@ func KeyValueDeleteHandler(w http.ResponseWriter, r *http.Request) {
 			http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusAccepted)
+	w.WriteHeader(http.StatusOK)
 
 }
 
@@ -105,4 +108,12 @@ func deleteKey(key string) error {
 	delete(store.M, key)
 	store.Unlock()
 	return nil
+}
+
+func NewFileTransactionLogger(filename string) (transaction.TransactionLogger, error) {
+	file, err := os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0755)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open transaction log file: %w", err)
+	}
+	return &transaction.FileTransactionLogger{File: file}, nil
 }

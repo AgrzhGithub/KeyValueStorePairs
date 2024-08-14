@@ -14,7 +14,7 @@ var helloMuxHandler = service.HelloMuxHandler
 
 func main() {
 
-	err := service.InitilizeTransactionLog()
+	err := service.InitializeTransactionLog()
 	if err != nil {
 		panic(err)
 	}

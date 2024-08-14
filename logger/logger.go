@@ -15,7 +15,8 @@ type ITransactionLogger interface {
 	ReadEvents() (<-chan Event, <-chan error)
 
 	Run()
-	CloseF()
+	Wait()
+	Close() error
 }
 
 type Event struct {

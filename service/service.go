@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"value/logger"
 	"value/types"
 )
@@ -40,8 +39,9 @@ func KeyValuePutHandler(w http.ResponseWriter, r *http.Request) {
 			http.StatusInternalServerError)
 		return
 	}
-	transact.WritePut(key, string(value))
+
 	w.WriteHeader(http.StatusCreated)
+	transact.WritePut(key, string(value))
 	log.Printf("PUT key=%s value=%s", key, string(value))
 
 }
@@ -81,8 +81,9 @@ func KeyValueDeleteHandler(w http.ResponseWriter, r *http.Request) {
 			http.StatusInternalServerError)
 		return
 	}
-	transact.WriteDelete(key)
+
 	w.WriteHeader(http.StatusOK)
+	transact.WriteDelete(key)
 
 }
 
@@ -112,18 +113,10 @@ func DeleteKey(key string) error {
 	return nil
 }
 
-func NewFileTransactionLogger(filename string) (*logger.TransactionLogger, error) {
-	file, err := os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0755)
-	if err != nil {
-		return nil, fmt.Errorf("cannot open logger log file: %w", err)
-	}
-	return &logger.TransactionLogger{File: file}, nil
-}
-
-func InitilizeTransactionLog() error {
+func InitializeTransactionLog() error {
 	var err error
 
-	transact, err = NewFileTransactionLogger("transaction.log")
+	transact, err = logger.NewFileTransactionLogger("transaction.log")
 	if err != nil {
 		return fmt.Errorf("failed to create event logger: %w", err)
 	}

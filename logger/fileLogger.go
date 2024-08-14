@@ -27,6 +27,16 @@ func (l *TransactionLogger) Err() <-chan error {
 	return l.errors
 }
 
+func NewFileTransactionLogger(filename string) (*TransactionLogger, error) {
+	var err error
+	var l TransactionLogger = TransactionLogger{wg: &sync.WaitGroup{}}
+	l.File, err = os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0755)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open logger log file: %w", err)
+	}
+	return &l, nil
+}
+
 func (l *TransactionLogger) Run() {
 	events := make(chan Event, 16)
 	l.events = events
@@ -41,13 +51,24 @@ func (l *TransactionLogger) Run() {
 			_, err := fmt.Fprintf(l.File, "%d\t%d\t%s\t%s\n",
 				l.lastSequence, e.EventType, e.Key, e.Value)
 			if err != nil {
-				errors <- err
-				return
+				errors <- fmt.Errorf("cannot write to log file: %w", err)
 			}
 			l.wg.Done()
 		}
 
 	}()
+}
+
+func (l *TransactionLogger) Wait() {
+	l.wg.Wait()
+}
+
+func (l *TransactionLogger) Close() error {
+	l.Wait()
+	if l.events != nil {
+		close(l.events)
+	}
+	return l.File.Close()
 }
 
 func (l *TransactionLogger) ReadEvents() (<-chan Event, <-chan error) {
@@ -64,34 +85,20 @@ func (l *TransactionLogger) ReadEvents() (<-chan Event, <-chan error) {
 		for scanner.Scan() {
 			line := scanner.Text()
 
-			if _, err := fmt.Sscanf(line, "%d\t%d\t%s\t%s",
-				&e.Sequence, &e.EventType, &e.Key, &e.Value); err != nil {
-				outError <- fmt.Errorf("input parse error: %s", err)
-				return
-			}
+			fmt.Sscanf(line, "%d\t%d\t%s\t%s",
+				&e.Sequence, &e.EventType, &e.Key, &e.Value)
+
 			if l.lastSequence >= e.Sequence {
-				outError <- fmt.Errorf("logger number out of sequence")
+				outError <- fmt.Errorf("transcation number out of sequence")
 				return
 			}
 			l.lastSequence = e.Sequence
 			outEvent <- e
 		}
 		if err := scanner.Err(); err != nil {
-			outError <- fmt.Errorf("logger log read failurt : %w", err)
+			outError <- fmt.Errorf("transaction log read failure : %w", err)
 			return
 		}
 	}()
 	return outEvent, outError
-}
-
-func (l *TransactionLogger) Wait() {
-	l.wg.Wait()
-}
-
-func (l *TransactionLogger) CloseF() error {
-	l.Wait()
-	if l.events != nil {
-		close(l.events)
-	}
-	return l.File.Close()
 }

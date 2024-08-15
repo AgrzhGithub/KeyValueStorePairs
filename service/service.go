@@ -12,7 +12,7 @@ import (
 )
 
 var store = types.Store
-var transact *logger.TransactionLogger
+var transact logger.TransactionLogger
 
 func HelloMuxHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello World!"))
@@ -116,7 +116,13 @@ func DeleteKey(key string) error {
 func InitializeTransactionLog() error {
 	var err error
 
-	transact, err = logger.NewFileTransactionLogger("transaction.log")
+	transact, err = logger.NewPostgresTransactionLogger(logger.PostgresDBParams{
+		Host:     "localhost:8080",
+		DbName:   "test",
+		User:     "test",
+		Password: "test",
+	})
+
 	if err != nil {
 		return fmt.Errorf("failed to create event logger: %w", err)
 	}

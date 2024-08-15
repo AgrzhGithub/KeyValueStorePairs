@@ -7,37 +7,37 @@ import (
 	"sync"
 )
 
-type TransactionLogger struct {
+type FileTransactionLogger struct {
 	events       chan<- Event
 	errors       <-chan error
 	lastSequence uint64
-	File         *os.File
+	file         *os.File
 	wg           *sync.WaitGroup
 }
 
-func (l *TransactionLogger) WritePut(key, value string) {
+func (l *FileTransactionLogger) WritePut(key, value string) {
 	l.wg.Add(1)
 	l.events <- Event{EventType: EventPut, Key: key, Value: value}
 }
-func (l *TransactionLogger) WriteDelete(key string) {
+func (l *FileTransactionLogger) WriteDelete(key string) {
 	l.wg.Add(1)
 	l.events <- Event{EventType: EventDelete, Key: key}
 }
-func (l *TransactionLogger) Err() <-chan error {
+func (l *FileTransactionLogger) Err() <-chan error {
 	return l.errors
 }
 
-func NewFileTransactionLogger(filename string) (*TransactionLogger, error) {
+func NewFileTransactionLogger(filename string) (*FileTransactionLogger, error) {
 	var err error
-	var l TransactionLogger = TransactionLogger{wg: &sync.WaitGroup{}}
-	l.File, err = os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0755)
+	var l FileTransactionLogger = FileTransactionLogger{wg: &sync.WaitGroup{}}
+	l.file, err = os.OpenFile(filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0755)
 	if err != nil {
 		return nil, fmt.Errorf("cannot open logger log file: %w", err)
 	}
 	return &l, nil
 }
 
-func (l *TransactionLogger) Run() {
+func (l *FileTransactionLogger) Run() {
 	events := make(chan Event, 16)
 	l.events = events
 
@@ -48,7 +48,7 @@ func (l *TransactionLogger) Run() {
 		for e := range events {
 			l.lastSequence++
 
-			_, err := fmt.Fprintf(l.File, "%d\t%d\t%s\t%s\n",
+			_, err := fmt.Fprintf(l.file, "%d\t%d\t%s\t%s\n",
 				l.lastSequence, e.EventType, e.Key, e.Value)
 			if err != nil {
 				errors <- fmt.Errorf("cannot write to log file: %w", err)
@@ -59,20 +59,20 @@ func (l *TransactionLogger) Run() {
 	}()
 }
 
-func (l *TransactionLogger) Wait() {
+func (l *FileTransactionLogger) Wait() {
 	l.wg.Wait()
 }
 
-func (l *TransactionLogger) Close() error {
+func (l *FileTransactionLogger) Close() error {
 	l.Wait()
 	if l.events != nil {
 		close(l.events)
 	}
-	return l.File.Close()
+	return l.file.Close()
 }
 
-func (l *TransactionLogger) ReadEvents() (<-chan Event, <-chan error) {
-	scanner := bufio.NewScanner(l.File)
+func (l *FileTransactionLogger) ReadEvents() (<-chan Event, <-chan error) {
+	scanner := bufio.NewScanner(l.file)
 	outEvent := make(chan Event)
 	outError := make(chan error, 1)
 

@@ -16,6 +16,7 @@ type PostgresTransactionLogger struct {
 
 type PostgresDBParams struct {
 	Host     string
+	Port     string
 	DbName   string
 	User     string
 	Password string
@@ -69,13 +70,14 @@ func (l *PostgresTransactionLogger) verifyTableExists() (bool, error) {
 
 	rows, err := l.db.Query(fmt.Sprintf("SELECT to_regclass('public.%s')", table))
 	defer rows.Close()
+
 	if err != nil {
 		return false, err
 	}
 	for rows.Next() && result != table {
 		rows.Scan(&result)
 	}
-	return result == table, nil
+	return result == table, rows.Err()
 
 }
 

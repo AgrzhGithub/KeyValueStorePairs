@@ -116,16 +116,22 @@ func DeleteKey(key string) error {
 func InitializeTransactionLog() error {
 	var err error
 
-	transact, err = logger.NewPostgresTransactionLogger(logger.PostgresDBParams{
-		Host:     "localhost:8080",
-		DbName:   "test",
-		User:     "test",
-		Password: "test",
-	})
+	// Create new DB
+	//transact, err = logger.NewPostgresTransactionLogger(logger.PostgresDBParams{
+	//	Host:     "127.0.0.1",
+	//	Port:     "8080",
+	//	DbName:   "kvs",
+	//	User:     "test",
+	//	Password: "hunter2",
+	//})
+
+	// Create new transaction file
+	transact, err = logger.NewFileTransactionLogger("transaction.log")
 
 	if err != nil {
 		return fmt.Errorf("failed to create event logger: %w", err)
 	}
+
 	events, errors := transact.ReadEvents()
 	e, ok := logger.Event{}, true
 

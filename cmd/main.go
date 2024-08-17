@@ -25,6 +25,7 @@ func main() {
 	r.HandleFunc("/v1/{key}", keyValueGetHandler).Methods("GET")
 	r.HandleFunc("/v1/{key}", keyValueDeleteHandler).Methods("DEL")
 
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServeTLS(":8080", "cert.pem", "key.pem", r))
+	//log.Fatal(http.ListenAndServe(":8080", r))
 
 }
